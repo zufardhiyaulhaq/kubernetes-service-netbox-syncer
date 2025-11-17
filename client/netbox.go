@@ -19,7 +19,7 @@ func (c *NetboxClient) Client() *netbox.APIClient {
 	return c.netboxClient
 }
 
-func (c *NetboxClient) CreatePrefix(service model.KubernetesService) error {
+func (c *NetboxClient) CreatePrefix(service model.KubernetesService) ([]model.Prefix, error) {
 	customFields := make(map[string]interface{})
 	for _, field := range c.settings.NetboxCustomField {
 		for k, v := range field {
@@ -27,15 +27,14 @@ func (c *NetboxClient) CreatePrefix(service model.KubernetesService) error {
 		}
 	}
 
-	fmt.Println(customFields)
-
+	prefixes := []model.Prefix{}
 	markUtilized := true
 	isPool := false
 
 	if utils.CheckIP(service.ExternalIPs) {
 		description := fmt.Sprintf("%s-%s-%s-%s", service.ExternalIPs, service.Name, service.Namespace, c.settings.KubernetesCluster)
 
-		_, _, err := c.netboxClient.IpamAPI.IpamPrefixesCreate(context.Background()).WritablePrefixRequest(netbox.WritablePrefixRequest{
+		prefix, _, err := c.netboxClient.IpamAPI.IpamPrefixesCreate(context.Background()).WritablePrefixRequest(netbox.WritablePrefixRequest{
 			Prefix:      service.ExternalIPs + "/32",
 			Description: &description,
 
@@ -46,20 +45,28 @@ func (c *NetboxClient) CreatePrefix(service model.KubernetesService) error {
 		}).Execute()
 
 		if err != nil {
-			return fmt.Errorf("failed to create prefix in Netbox: %v", err)
+			return []model.Prefix{}, fmt.Errorf("failed to create prefix in Netbox: %v", err)
 		}
+
+		prefixes = append(prefixes, model.Prefix{
+			PrefixID:    prefix.Id,
+			Prefix:      service.ExternalIPs + "/32",
+			ExternalIPs: service.ExternalIPs,
+			ServiceName: service.Name,
+			Namespace:   service.Namespace,
+		})
 	}
 
 	if utils.CheckDNS(service.ExternalIPs) {
 		IPs, err := utils.GetIPFromDNS(service.ExternalIPs)
 		if err != nil {
-			return fmt.Errorf("failed to resolve DNS %s: %v", service.ExternalIPs, err)
+			return []model.Prefix{}, fmt.Errorf("failed to resolve DNS %s: %v", service.ExternalIPs, err)
 		}
 
 		for _, ip := range IPs {
 			description := fmt.Sprintf("%s-%s-%s-%s-%s", ip, service.ExternalIPs, service.Name, service.Namespace, c.settings.KubernetesCluster)
 
-			_, _, err := c.netboxClient.IpamAPI.IpamPrefixesCreate(context.Background()).WritablePrefixRequest(netbox.WritablePrefixRequest{
+			prefix, _, err := c.netboxClient.IpamAPI.IpamPrefixesCreate(context.Background()).WritablePrefixRequest(netbox.WritablePrefixRequest{
 				Prefix:      ip + "/32",
 				Description: &description,
 
@@ -70,12 +77,25 @@ func (c *NetboxClient) CreatePrefix(service model.KubernetesService) error {
 			}).Execute()
 
 			if err != nil {
-				return fmt.Errorf("failed to create prefix in Netbox: %v", err)
+				return []model.Prefix{}, fmt.Errorf("failed to create prefix in Netbox: %v", err)
 			}
+
+			prefixes = append(prefixes, model.Prefix{
+				PrefixID:    prefix.Id,
+				Prefix:      ip + "/32",
+				ExternalIPs: service.ExternalIPs,
+				ServiceName: service.Name,
+				Namespace:   service.Namespace,
+			})
 		}
 	}
 
-	return nil
+	return prefixes, nil
+}
+
+func (c *NetboxClient) DeletePrefix(id int32) error {
+	_, err := c.netboxClient.IpamAPI.IpamPrefixesDestroy(context.Background(), id).Execute()
+	return err
 }
 
 func NewNetboxClient(settings settings.Settings) (*NetboxClient, error) {

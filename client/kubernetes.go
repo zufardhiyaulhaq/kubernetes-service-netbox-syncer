@@ -3,6 +3,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer/model"
 	"github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer/settings"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -147,6 +149,122 @@ func (c *KubernetesClient) getExternalIP(svc *v1.Service) string {
 	}
 
 	return ""
+}
+
+func (c *KubernetesClient) CreateOrLoadConfiMap() ([]model.Prefix, error) {
+	var prefixes []model.Prefix
+
+	configMapName := c.Settings.KubernetesConfigMapName
+	configMapNamespace := c.Settings.KubernetesConfigMapNamepace
+
+	// Try to get existing ConfigMap
+	configMap, err := c.k8sClient.CoreV1().ConfigMaps(configMapNamespace).Get(
+		context.Background(),
+		configMapName,
+		metav1.GetOptions{},
+	)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// ConfigMap not found, create it with empty data
+			newConfigMap := &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: configMapNamespace,
+				},
+				Data: map[string]string{
+					"prefixes.json": "[]",
+				},
+			}
+
+			_, err = c.k8sClient.CoreV1().ConfigMaps(configMapNamespace).Create(
+				context.Background(),
+				newConfigMap,
+				metav1.CreateOptions{},
+			)
+			if err != nil {
+				return nil, err
+			}
+			log.Printf("Created new ConfigMap %s/%s with empty prefix list", configMapNamespace, configMapName)
+			return prefixes, nil
+		}
+		return nil, err
+	}
+
+	// ConfigMap exists, load the data
+	if data, ok := configMap.Data["prefixes.json"]; ok && data != "" {
+		err = json.Unmarshal([]byte(data), &prefixes)
+		if err != nil {
+			log.Printf("Failed to unmarshal prefixes from ConfigMap: %v", err)
+			return nil, err
+		}
+		log.Printf("Loaded %d prefixes from ConfigMap %s/%s", len(prefixes), configMapNamespace, configMapName)
+	} else {
+		log.Printf("ConfigMap %s/%s exists but has no prefix data", configMapNamespace, configMapName)
+	}
+
+	return prefixes, nil
+}
+
+func (c *KubernetesClient) SavePrefixToConfigMap(prefixes []model.Prefix) error {
+	// Marshal prefixes to JSON
+	data, err := json.MarshalIndent(prefixes, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	configMapName := c.Settings.KubernetesConfigMapName
+	configMapNamespace := c.Settings.KubernetesConfigMapNamepace
+
+	// Check if ConfigMap exists
+	existingConfigMap, err := c.k8sClient.CoreV1().ConfigMaps(configMapNamespace).Get(
+		context.Background(),
+		configMapName,
+		metav1.GetOptions{},
+	)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Create new ConfigMap
+			configMap := &v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: configMapNamespace,
+				},
+				Data: map[string]string{
+					"prefixes.json": string(data),
+				},
+			}
+
+			_, err = c.k8sClient.CoreV1().ConfigMaps(configMapNamespace).Create(
+				context.Background(),
+				configMap,
+				metav1.CreateOptions{},
+			)
+			if err != nil {
+				return err
+			}
+			log.Printf("Created ConfigMap %s/%s", configMapNamespace, configMapName)
+			return nil
+		}
+		return err
+	}
+
+	// Update existing ConfigMap
+	existingConfigMap.Data = map[string]string{
+		"prefixes.json": string(data),
+	}
+
+	_, err = c.k8sClient.CoreV1().ConfigMaps(configMapNamespace).Update(
+		context.Background(),
+		existingConfigMap,
+		metav1.UpdateOptions{},
+	)
+	if err != nil {
+		return err
+	}
+	log.Printf("Updated ConfigMap %s/%s", configMapNamespace, configMapName)
+	return nil
 }
 
 func NewKubernetesClient(settings settings.Settings) (*KubernetesClient, error) {
