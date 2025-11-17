@@ -41,64 +41,71 @@ func main() {
 	}
 	fmt.Printf("Fetched %d Kubernetes services\n", len(services))
 
-	// loop service to be created in netbox
-	var createdServices []model.KubernetesService
+	// Build a map of existing External IPs for quick lookup
+	existingIPMap := make(map[string]model.Prefix)
+	for _, prefix := range existingPrefixes {
+		existingIPMap[prefix.ExternalIPs] = prefix
+	}
 
+	// Build a map of current service External IPs
+	serviceIPMap := make(map[string]model.KubernetesService)
 	for _, service := range services {
-		skipCreated := false
+		serviceIPMap[service.ExternalIPs] = service
+	}
 
-		for _, existingPrefix := range existingPrefixes {
-			if service.ExternalIPs == existingPrefix.ExternalIPs {
-				skipCreated = true
-				continue
-			}
-		}
-
-		if !skipCreated {
+	// Find services to create (in Kubernetes but not in Netbox)
+	var createdServices []model.KubernetesService
+	for _, service := range services {
+		if _, exists := existingIPMap[service.ExternalIPs]; !exists {
 			createdServices = append(createdServices, service)
 		}
 	}
 
-	// create the servicde in netbox and return prefixes
+	// Create prefixes in Netbox for new services
 	for _, service := range createdServices {
-		fmt.Printf("Service: %s, %s, %s\n", service.ExternalIPs, service.Name, service.Namespace)
+		fmt.Printf("Creating prefix for service: %s/%s (%s)\n", service.Namespace, service.Name, service.ExternalIPs)
 		prefixes, err := netboxClient.CreatePrefix(service)
 		if err != nil {
 			log.Printf("Error creating prefix in Netbox for service %s/%s: %v", service.Namespace, service.Name, err)
 		} else {
 			fmt.Printf("Created prefix in Netbox for service %s/%s\n", service.Namespace, service.Name)
-		}
-
-		existingPrefixes = append(existingPrefixes, prefixes...)
-	}
-
-	// loop into service from kubernetes, if prefix from configmap is not found on kubernetes service based on external IP, we need to delete the prefix from netbox
-	var deletedPrefixes []model.Prefix
-
-	for _, existingPrefix := range existingPrefixes {
-		deletePrefix := true
-		for _, service := range services {
-			if existingPrefix.ExternalIPs == service.ExternalIPs {
-				deletePrefix = false
-				continue
+			// Add newly created prefixes to existing list
+			existingPrefixes = append(existingPrefixes, prefixes...)
+			for _, prefix := range prefixes {
+				existingIPMap[prefix.ExternalIPs] = prefix
 			}
 		}
+	}
 
-		if deletePrefix {
+	// Find prefixes to delete (in Netbox but not in Kubernetes)
+	var deletedPrefixes []model.Prefix
+	for _, existingPrefix := range existingPrefixes {
+		if _, exists := serviceIPMap[existingPrefix.ExternalIPs]; !exists {
 			deletedPrefixes = append(deletedPrefixes, existingPrefix)
 		}
 	}
 
+	// Delete stale prefixes from Netbox
+	deletedPrefixIDs := make(map[int32]bool)
 	for _, deletedPrefix := range deletedPrefixes {
 		err := netboxClient.DeletePrefix(deletedPrefix.PrefixID)
 		if err != nil {
 			log.Printf("Error deleting prefix %d from Netbox: %v", deletedPrefix.PrefixID, err)
 		} else {
 			fmt.Printf("Deleted prefix %d from Netbox\n", deletedPrefix.PrefixID)
+			deletedPrefixIDs[deletedPrefix.PrefixID] = true
 		}
 	}
 
+	// Build updated prefixes list (existing prefixes minus deleted ones)
 	var updatedPrefixes []model.Prefix
+	for _, prefix := range existingPrefixes {
+		if !deletedPrefixIDs[prefix.PrefixID] {
+			updatedPrefixes = append(updatedPrefixes, prefix)
+		}
+	}
+
+	fmt.Printf("Updating ConfigMap with %d prefixes\n", len(updatedPrefixes))
 
 	// update the latest prefixes to configmap
 	err = kubernetesClient.SavePrefixToConfigMap(updatedPrefixes)
