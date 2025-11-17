@@ -1,6 +1,8 @@
 module github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer
 
-go 1.24.10
+go 1.24.0
+
+toolchain go1.24.8
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0
