@@ -1,6 +1,6 @@
 package model
 
-type SyncResult struct {
+type Prefix struct {
 	PrefixID    int64
 	Prefix      string
 	DNS         string

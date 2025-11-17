@@ -1,8 +1,12 @@
+// Package client provides Kubernetes and Netbox client implementations for syncing services.
 package client
 
 import (
 	"context"
 	"log"
+	"os"
+	"path/filepath"
+	"slices"
 
 	"github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer/model"
 	"github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer/settings"
@@ -10,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type KubernetesClient struct {
@@ -85,12 +90,7 @@ func (c *KubernetesClient) matchesTypeFilter(serviceType v1.ServiceType) bool {
 		return true
 	}
 
-	for _, filterType := range c.Settings.KubernetesTypeFilter {
-		if string(serviceType) == filterType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.Settings.KubernetesTypeFilter, string(serviceType))
 }
 
 // matchesAnnotationFilter checks if the service annotations match the filter
@@ -150,15 +150,36 @@ func (c *KubernetesClient) getExternalIP(svc *v1.Service) string {
 }
 
 func NewKubernetesClient(settings settings.Settings) (*KubernetesClient, error) {
-	inClusterConf, err := rest.InClusterConfig()
+	var config *rest.Config
+	var err error
+
+	// Try in-cluster config first
+	config, err = rest.InClusterConfig()
 	if err != nil {
-		log.Print("failed when get in-cluster config")
+		log.Print("failed to get in-cluster config, trying kubeconfig")
+
+		// Fallback to kubeconfig
+		kubeconfig := os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			// Default kubeconfig location
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return nil, err
+			}
+			kubeconfig = filepath.Join(home, ".kube", "config")
+		}
+
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
 		return nil, err
 	}
-	k8sClient, err := kubernetes.NewForConfig(inClusterConf)
-	if err != nil {
-		return nil, err
-	}
+
 	conf := KubernetesClient{
 		k8sClient: k8sClient,
 		Settings:  settings,
