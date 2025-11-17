@@ -21,9 +21,13 @@ func (c *NetboxClient) Client() *netbox.APIClient {
 
 func (c *NetboxClient) CreatePrefix(service model.KubernetesService) error {
 	customFields := make(map[string]interface{})
-	for k, v := range c.settings.NetboxCustomField {
-		customFields[k] = v
+	for _, field := range c.settings.NetboxCustomField {
+		for k, v := range field {
+			customFields[k] = v
+		}
 	}
+
+	fmt.Println(customFields)
 
 	markUtilized := true
 	isPool := false
