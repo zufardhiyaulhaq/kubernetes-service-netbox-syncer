@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    helm.sh/chart: {{ template "kubernetes-service-netbox-syncer.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  NETBOX_URL: "{{ .Values.configuration.netbox.url }}"
+  NETBOX_CUSTOM_FIELD: "{{ .Values.configuration.netbox.customField }}"
+  KUBERNETES_CLUSTER: "{{ .Values.configuration.kubernetes.cluster }}"
+  KUBERNETES_CONFIGMAP_NAME: "{{ .Values.configuration.kubernetes.configMapName }}"
+  KUBERNETES_CONFIGMAP_NAMESPACE: "{{ .Values.configuration.kubernetes.configMapNamespace }}"
+  KUBERNETES_SERVICE_ANNOTATION_FILTER: "{{ .Values.configuration.kubernetes.serviceAnnotationFilter }}"
+  KUBERNETES_SERVICE_LABEL_FILTER: "{{ .Values.configuration.kubernetes.serviceLabelFilter }}"
+  KUBERNETES_NAMESPACE_FILTER: "{{ .Values.configuration.kubernetes.namespaceFilter }}"
+  KUBERNETES_TYPE_FILTER: "{{ .Values.configuration.kubernetes.typeFilter }}"

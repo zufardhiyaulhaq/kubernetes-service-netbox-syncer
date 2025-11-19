@@ -1,0 +1,19 @@
+{{ template "chart.header" . }}
+{{ template "chart.description" . }}
+
+{{ template "chart.versionBadge" . }}{{ template "chart.typeBadge" . }}{{ template "chart.appVersionBadge" . }}[![made with Go](https://img.shields.io/badge/made%20with-Go-brightgreen)](http://golang.org) [![Github main branch build](https://img.shields.io/github/workflow/status/gopaytech/kubernetes-service-netbox-syncer/Main)](https://github.com/gopaytech/kubernetes-service-netbox-syncer/actions/workflows/main.yml) [![GitHub issues](https://img.shields.io/github/issues/gopaytech/kubernetes-service-netbox-syncer)](https://github.com/gopaytech/kubernetes-service-netbox-syncer/issues) [![GitHub pull requests](https://img.shields.io/github/issues-pr/gopaytech/kubernetes-service-netbox-syncer)](https://github.com/gopaytech/kubernetes-service-netbox-syncer/pulls)[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubernetes-service-netbox-syncer)](https://artifacthub.io/packages/search?repo=kubernetes-service-netbox-syncer)
+
+## Installing
+
+To install the chart with the release name `my-release`:
+
+```console
+helm repo add kubernetes-service-netbox-syncer https://zufardhiyaulhaq.com/kubernetes-service-netbox-syncer/charts/releases/
+helm install my-kubernetes-service-netbox-syncer kubernetes-service-netbox-syncer/kubernetes-service-netbox-syncer --values values.yaml
+```
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}

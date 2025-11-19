@@ -1,0 +1,41 @@
+cronjob:
+  image: "ghcr.io/gopaytech/kubernetes-service-netbox-syncer"
+  tag: "v1.0.0"
+  schedule: "32 5 * * *"
+  timeZone: 'Asia/Jakarta'
+
+resources:
+  limits:
+    cpu: 256m
+    memory: 256Mi
+  requests:
+    cpu: 64m
+    memory: 64Mi
+
+serviceAccount:
+  imagePullSecrets: []
+  automountServiceAccountToken: true
+
+podLabels: {}
+
+
+configuration:
+  netbox:
+    url:
+    customField: purpose:load-balancer,environment:production
+    token:
+      secretName: netbox-token
+      secretKey: token
+  kubernetes:
+    cluster:
+    configMapName: k8s-netbox-syncer-config
+    configMapNamespace: infrastructure
+    serviceAnnotationFilter: service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type:internet
+    serviceLabelFilter: istio-system
+    namespaceFilter: infrastructure
+    typeFilter: LoadBalancer
+
+
+
+
+
