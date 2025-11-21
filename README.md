@@ -27,6 +27,7 @@ helm install my-kubernetes-service-netbox-syncer kubernetes-service-netbox-synce
 | configuration.netbox.token.secretName | string | `"netbox-token"` |  |
 | configuration.netbox.url | string | `nil` |  |
 | cronjob.image | string | `"ghcr.io/gopaytech/kubernetes-service-netbox-syncer"` |  |
+| cronjob.maximumIteration | int | `3` |  |
 | cronjob.schedule | string | `"32 5 * * *"` |  |
 | cronjob.tag | string | `"v1.0.0"` |  |
 | cronjob.timeZone | string | `"Asia/Jakarta"` |  |
