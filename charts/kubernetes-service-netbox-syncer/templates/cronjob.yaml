@@ -30,7 +30,7 @@ spec:
               - configMapRef:
                   name: {{ .Release.Name }}
             env:
-              - name: NETBOX_TOKEN
+              - name: NETBOX_API_TOKEN
                 valueFrom:
                   secretKeyRef:
                     name: {{ .Values.configuration.netbox.token.secretName }}
