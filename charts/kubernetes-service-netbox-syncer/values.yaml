@@ -35,8 +35,3 @@ configuration:
     serviceLabelFilter: istio-system
     namespaceFilter: infrastructure
     typeFilter: LoadBalancer
-
-
-
-
-

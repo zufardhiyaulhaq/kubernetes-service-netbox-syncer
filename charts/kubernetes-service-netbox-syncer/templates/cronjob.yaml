@@ -9,8 +9,8 @@ metadata:
   name: {{ .Release.Name }}
 spec:
   concurrencyPolicy: Forbid
-  schedule: {{ .Values.cronjob.schedule }}
-  timeZone: {{ .Values.cronjob.timeZone }}
+  schedule: {{ .Values.cronjob.schedule | quote }}
+  timeZone: {{ .Values.cronjob.timeZone | quote }}
   failedJobsHistoryLimit: 1
   successfulJobsHistoryLimit: {{ .Values.cronjob.maximumIteration }}
   jobTemplate:
