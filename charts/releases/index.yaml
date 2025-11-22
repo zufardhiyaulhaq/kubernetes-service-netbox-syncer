@@ -3,7 +3,21 @@ entries:
   kubernetes-service-netbox-syncer:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2025-11-21T16:07:55.003687+07:00"
+    created: "2025-11-22T15:56:35.945011+07:00"
+    digest: add0fed8f9e846418ad896f1f8d94ddc3d371d43cd66e2f612427ff120175447
+    home: https://github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer
+    maintainers:
+    - email: zufardhiyaulhaq@gmail.com
+      name: Zufar Dhiyaulhaq
+      url: https://zufardhiyaulhaq.com
+    name: kubernetes-service-netbox-syncer
+    type: application
+    urls:
+    - kubernetes-service-netbox-syncer-1.0.2.tgz
+    version: 1.0.2
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2025-11-22T15:56:35.944889+07:00"
     digest: b0d35f3d11d2dbe7a708b48473adbb48d52e26934edf9afb0e916b589973d205
     home: https://github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer
     maintainers:
@@ -17,7 +31,7 @@ entries:
     version: 1.0.1
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2025-11-21T16:07:55.00346+07:00"
+    created: "2025-11-22T15:56:35.944526+07:00"
     digest: d1db9d4fbfd2bff0404c2b5241883dce25eb29a4ce30a97ee6b58b72f578710d
     home: https://github.com/zufardhiyaulhaq/kubernetes-service-netbox-syncer
     maintainers:
@@ -29,4 +43,4 @@ entries:
     urls:
     - kubernetes-service-netbox-syncer-1.0.0.tgz
     version: 1.0.0
-generated: "2025-11-21T16:07:55.001947+07:00"
+generated: "2025-11-22T15:56:35.94375+07:00"
